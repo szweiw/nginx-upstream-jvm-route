@@ -1,0 +1,91 @@
+--- src/http/ngx_http_upstream.c	2014-07-21 11:43:59.710115551 +0800
++++ src/http/ngx_http_upstream.c.mod	2014-07-21 14:16:39.190998064 +0800
+@@ -4609,6 +4609,7 @@
+                                          |NGX_HTTP_UPSTREAM_WEIGHT
+                                          |NGX_HTTP_UPSTREAM_MAX_FAILS
+                                          |NGX_HTTP_UPSTREAM_FAIL_TIMEOUT
++                                         |NGX_HTTP_UPSTREAM_SRUN_ID
+                                          |NGX_HTTP_UPSTREAM_DOWN
+                                          |NGX_HTTP_UPSTREAM_BACKUP);
+     if (uscf == NULL) {
+@@ -4700,7 +4701,7 @@
+     ngx_http_upstream_srv_conf_t  *uscf = conf;
+ 
+     time_t                       fail_timeout;
+-    ngx_str_t                   *value, s;
++    ngx_str_t                   *value, s, id;
+     ngx_url_t                    u;
+     ngx_int_t                    weight, max_fails;
+     ngx_uint_t                   i;
+@@ -4740,6 +4741,8 @@
+     weight = 1;
+     max_fails = 1;
+     fail_timeout = 10;
++    id.data = (u_char *) "a";
++    id.len = sizeof("a") - 1;
+ 
+     for (i = 2; i < cf->args->nelts; i++) {
+ 
+@@ -4791,6 +4794,22 @@
+             continue;
+         }
+ 
++        if (ngx_strncmp(value[i].data, "srun_id=", 8) == 0) {
++
++            if (!(uscf->flags & NGX_HTTP_UPSTREAM_SRUN_ID)) {
++                goto invalid;
++            }
++
++            id.len = value[i].len - 8;
++            id.data = &value[i].data[8];
++
++            if (id.len == 0) {
++                goto invalid;
++            }
++
++            continue;
++        }
++ 
+         if (ngx_strcmp(value[i].data, "backup") == 0) {
+ 
+             if (!(uscf->flags & NGX_HTTP_UPSTREAM_BACKUP)) {
+@@ -4821,6 +4840,7 @@
+     us->weight = weight;
+     us->max_fails = max_fails;
+     us->fail_timeout = fail_timeout;
++    us->srun_id = id;
+ 
+     return NGX_CONF_OK;
+ 
+--- src/http/ngx_http_upstream.h	2014-07-21 11:44:43.370431008 +0800
++++ src/http/ngx_http_upstream.h.mod	2014-07-21 14:21:54.265372108 +0800
+@@ -92,6 +92,7 @@
+     ngx_uint_t                       weight;
+     ngx_uint_t                       max_fails;
+     time_t                           fail_timeout;
++    ngx_str_t                        srun_id;
+ 
+     unsigned                         down:1;
+     unsigned                         backup:1;
+@@ -104,6 +105,7 @@
+ #define NGX_HTTP_UPSTREAM_FAIL_TIMEOUT  0x0008
+ #define NGX_HTTP_UPSTREAM_DOWN          0x0010
+ #define NGX_HTTP_UPSTREAM_BACKUP        0x0020
++#define NGX_HTTP_UPSTREAM_SRUN_ID       0x0040
+ 
+ 
+ struct ngx_http_upstream_srv_conf_s {
+@@ -126,6 +128,13 @@
+     in_port_t                        default_port;
+     ngx_uint_t                       no_port;  /* unsigned no_port:1 */
+ 
++    /* add for jvm_route */
++    ngx_array_t                     *values;
++    ngx_array_t                     *lengths;
++    ngx_str_t                        session_cookie;
++    ngx_str_t                        session_url;
++    unsigned                         reverse:1;
++
+ #if (NGX_HTTP_UPSTREAM_ZONE)
+     ngx_shm_zone_t                  *shm_zone;
+ #endif
