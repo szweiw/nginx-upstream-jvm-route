@@ -2,7 +2,13 @@ Changes with nginx_upstream_jvm_route                                       2009
 
     *) Initial public release
 
+<<<<<<< HEAD
 # by szweiw 2016-09-19
 update for nginx-1.10.1 stable.
 1) update jvm_route.patch, correct the position of the inserted rows.
 2) update ngx_http_upstream_jvm_route_module.c, because ngx_http_upstream_rr_peer_data_t changed definition of the current field from ngx_uint_t to ngx_http_upstream_rr_peer_t*.
+=======
+Changes with nginx_upstream_jvm_route                                       2009-11-12
+
+    *) add jvm_route_status
+>>>>>>> bf7f905b35d8d49407c3648f1016be8497056d9c
